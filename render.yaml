@@ -1,10 +1,64 @@
 # Render Blueprint for the NumVex WEBSITE (the Next.js app in apps/web).
 #
-# The API (numvexs-api) already exists on Render and is NOT described here, so applying this file never touches it.
+# Describes BOTH services: the API (numvexs-api) and the website (numvexs-web). Secret values are never stored here:
+# every `sync: false` variable is asked for in the Render dashboard when the blueprint is applied.
 # Step-by-step instructions, and what to change on the API, are in deploy/RENDER.md.
 #
 # Nothing here switches the live site over: it only creates a new service. The live site stays on Vercel until the domain is moved.
 services:
+  - type: web
+    name: numvexs-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci && npm run build -w @numvexs/shared --if-present && npm run build -w @numvexs/api
+    startCommand: npm run start -w @numvexs/api
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "true"
+      # Render's edge + the website service in front of the API; see deploy/RENDER.md before changing.
+      - key: TRUST_PROXY
+        value: "2"
+      # The website's public address (allowed to call this API with cookies), e.g. https://numvexs-web.onrender.com
+      - key: WEB_ORIGIN
+        sync: false
+      # MongoDB connection string (e.g. from MongoDB Atlas). Render has no managed MongoDB.
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: EMAIL_FROM
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: POCKETFI_API_TOKEN
+        sync: false
+      - key: POCKETFI_BUSINESS_ID
+        sync: false
+      - key: POCKETFI_WEBHOOK_SECRET
+        sync: false
+      # Provider keys: leave a value empty and that server shows "not set up yet".
+      - key: DAISYSMS_API_KEY
+        sync: false
+      - key: SMSPOOL_API_KEY
+        sync: false
+      - key: FIVESIM_API_KEY
+        sync: false
+      - key: JUICYSMS_API_KEY
+        sync: false
+      - key: GRAMSUBS_SECRET_KEY
+        sync: false
   - type: web
     name: numvexs-web
     runtime: node

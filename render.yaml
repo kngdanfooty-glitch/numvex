@@ -32,16 +32,9 @@ services:
       # MongoDB connection string (e.g. from MongoDB Atlas). Render has no managed MongoDB.
       - key: MONGODB_URI
         sync: false
+      # Email is left off for now (no SMTP_HOST): sign-up codes are printed in the service logs instead of emailed.
       - key: JWT_ACCESS_SECRET
         generateValue: true
-      - key: EMAIL_FROM
-        sync: false
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
-        sync: false
       - key: POCKETFI_API_TOKEN
         sync: false
       - key: POCKETFI_BUSINESS_ID
@@ -58,6 +51,22 @@ services:
       - key: JUICYSMS_API_KEY
         sync: false
       - key: GRAMSUBS_SECRET_KEY
+        sync: false
+      - key: TEXTVERIFIED_API_KEY
+        sync: false
+      - key: TEXTVERIFIED_USERNAME
+        sync: false
+      - key: HEROSMS_API_KEY
+        sync: false
+      - key: SMSBOWER_API_KEY
+        sync: false
+      - key: MANESMS_API_KEY
+        sync: false
+      - key: MORETHANPANEL_API_KEY
+        sync: false
+      - key: PEAKERR_API_KEY
+        sync: false
+      - key: RESELLERSMM_API_KEY
         sync: false
   - type: web
     name: numvexs-web

@@ -1,0 +1,28 @@
+# Render Blueprint for the NumVex WEBSITE (the Next.js app in apps/web).
+#
+# The API (numvexs-api) already exists on Render and is NOT described here, so applying this file never touches it.
+# Step-by-step instructions, and what to change on the API, are in deploy/RENDER.md.
+#
+# Nothing here switches the live site over: it only creates a new service. The live site stays on Vercel until the domain is moved.
+services:
+  - type: web
+    name: numvexs-web
+    runtime: node
+    plan: starter # about $7/month, always on. "free" works but sleeps after 15 idle minutes (the first visitor waits about a minute).
+    region: frankfurt # the SAME region as numvexs-api, so the two talk quickly
+    branch: main
+    # Installs the whole workspace (the website uses packages/shared), then builds only the website.
+    buildCommand: npm ci && npm run build -w @numvexs/web
+    startCommand: npm run start -w @numvexs/web
+    healthCheckPath: /login
+    autoDeploy: true # every push to main redeploys, whoever wrote the commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # `npm start` in apps/web listens on 3000; tell Render so it finds the port.
+      - key: PORT
+        value: "3000"
+      # Where /api/* calls are forwarded. Read at BUILD time, so changing it needs a new deploy.
+      # Set it to the API's public address, e.g. https://numvexs-api.onrender.com (no trailing slash).
+      - key: API_PROXY_TARGET
+        sync: false

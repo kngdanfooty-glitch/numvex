@@ -1,0 +1,28 @@
+{
+  "name": "numvexs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NumVex \u2014 virtual numbers, social logs, eSIMs and account boosting",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:web": "npm run dev -w @numvexs/web",
+    "build": "npm run build -w @numvexs/api && npm run build -w @numvexs/web",
+    "lint": "npm run lint -w @numvexs/web",
+    "typecheck": "npm run typecheck -w @numvexs/shared && npm run typecheck -w @numvexs/api && npm run typecheck -w @numvexs/web",
+    "dev:api": "npm run dev -w @numvexs/api",
+    "db:mem": "npm run db:mem -w @numvexs/api",
+    "test": "npm run test -w @numvexs/api"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "prettier": "^3.4.2",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

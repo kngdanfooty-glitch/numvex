@@ -1,0 +1,186 @@
+@import 'tailwindcss';
+
+/*
+ * NumVex theme — "Blue & Zinc": light, white surfaces, blue accent on zinc neutrals (NumVex brand).
+ * Tokens live on :root and are exposed to Tailwind via @theme so
+ * `bg-surface`, `text-muted`, `text-accent` etc. work as utilities.
+ */
+:root {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --bg-elevated: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  --text: #18181b;
+  --text-muted: #52525b;
+  --text-faint: #a1a1aa;
+
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --accent-ring: rgba(37, 99, 235, 0.35);
+  --accent-contrast: #ffffff;
+
+  --success: #12a150;
+  --warning: #d98a0b;
+  --danger: #dc3545;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, Helvetica, sans-serif; /* plain system sans-serif (trial). Inter: var(--font-inter), ui-sans-serif, system-ui, sans-serif */
+  --font-display: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, Helvetica, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    background: var(--bg);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+  }
+
+  a {
+    color: inherit;
+    cursor: pointer;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/*
+ * Page background (landing, auth, 404): the same 46px blue grid as the dashboard, drawn on the
+ * page itself so it scrolls with the content, plus a soft glow at the top.
+ */
+body {
+  background-image:
+    radial-gradient(48rem 20rem at 50% -4rem, rgba(37, 99, 235, 0.12), transparent 70%),
+    linear-gradient(rgba(37, 99, 235, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.09) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    46px 46px,
+    46px 46px;
+}
+
+/* A "⟩" arrow in front of a heading (same marker as smsgecko). Set --kicker-arrow to recolour it. */
+.section-kicker::before {
+  content: '⟩';
+  color: var(--kicker-arrow, var(--accent));
+  margin-right: 0.55rem;
+  font-weight: 700;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee 38s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* ---------- dashboard ---------- */
+
+/*
+ * Dark theme for the dashboard only. The page wraps itself in .dash-root and the
+ * theme toggle flips data-theme="dark" on it, so every token below overrides the
+ * light values for everything inside.
+ */
+.dash-root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #06171a;
+  --bg-elevated: #0a2024;
+  --surface: #0f2a2e;
+  --surface-2: #17383d;
+  --border: #1f4348;
+  --border-strong: #3f3f46;
+  --text: #eff6ff;
+  --text-muted: #a1a1aa;
+  --text-faint: #a1a1aa;
+  --accent: #60a5fa;
+  --accent-hover: #93c5fd;
+  --accent-soft: rgba(96, 165, 250, 0.15);
+  --accent-ring: rgba(96, 165, 250, 0.4);
+  --danger: #ff6b78;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+
+/* Admin area only: a faint grid behind the page, and a navy sidebar carrying the same grid in a lighter line. */
+.dash-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(40rem 10rem at 50% 0, rgba(37, 99, 235, 0.1), transparent 70%),
+    linear-gradient(rgba(37, 99, 235, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.09) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    46px 46px,
+    46px 46px;
+}
+.dash-sidebar {
+  background-color: #18181b;
+  background-image:
+    linear-gradient(rgba(96, 165, 250, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96, 165, 250, 0.1) 1px, transparent 1px);
+  background-size: 46px 46px;
+  background-position: -1px -1px;
+}

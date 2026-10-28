@@ -9,7 +9,7 @@ services:
   - type: web
     name: numvexs-api
     runtime: node
-    plan: starter
+    plan: free # sleeps after 15 idle minutes; switch to starter (about $7/month) for always-on
     region: frankfurt
     branch: main
     buildCommand: npm ci && npm run build -w @numvexs/shared --if-present && npm run build -w @numvexs/api
@@ -62,7 +62,7 @@ services:
   - type: web
     name: numvexs-web
     runtime: node
-    plan: starter # about $7/month, always on. "free" works but sleeps after 15 idle minutes (the first visitor waits about a minute).
+    plan: free # sleeps after 15 idle minutes; switch to starter (about $7/month) for always-on
     region: frankfurt # the SAME region as numvexs-api, so the two talk quickly
     branch: main
     # Installs the whole workspace (the website uses packages/shared), then builds only the website.

@@ -12,7 +12,7 @@ services:
     plan: free # sleeps after 15 idle minutes; switch to starter (about $7/month) for always-on
     region: frankfurt
     branch: main
-    buildCommand: npm ci && npm run build -w @numvexs/shared --if-present && npm run build -w @numvexs/api
+    buildCommand: npm ci --include=dev && npm run build -w @numvexs/api
     startCommand: npm run start -w @numvexs/api
     healthCheckPath: /health
     autoDeploy: true
@@ -75,7 +75,7 @@ services:
     region: frankfurt # the SAME region as numvexs-api, so the two talk quickly
     branch: main
     # Installs the whole workspace (the website uses packages/shared), then builds only the website.
-    buildCommand: npm ci && npm run build -w @numvexs/web
+    buildCommand: npm ci --include=dev && npm run build -w @numvexs/web
     startCommand: npm run start -w @numvexs/web
     healthCheckPath: /login
     autoDeploy: true # every push to main redeploys, whoever wrote the commit

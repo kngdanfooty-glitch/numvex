@@ -76,13 +76,13 @@ services:
     branch: main
     # Installs the whole workspace (the website uses packages/shared), then builds only the website.
     buildCommand: npm ci --include=dev && npm run build -w @numvexs/web
-    startCommand: npm run start -w @numvexs/web
+    startCommand: cd apps/web && npx next start --port $PORT
     healthCheckPath: /login
     autoDeploy: true # every push to main redeploys, whoever wrote the commit
     envVars:
       - key: NODE_VERSION
         value: "22"
-      # `npm start` in apps/web listens on 3000; tell Render so it finds the port.
+      # The start command binds to $PORT (the web start script hardcodes 3300, so it is bypassed).
       - key: PORT
         value: "3000"
       # Where /api/* calls are forwarded. Read at BUILD time, so changing it needs a new deploy.

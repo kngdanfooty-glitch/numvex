@@ -32,7 +32,18 @@ services:
       # MongoDB connection string (e.g. from MongoDB Atlas). Render has no managed MongoDB.
       - key: MONGODB_URI
         sync: false
-      # Email is left off for now (no SMTP_HOST): sign-up codes are printed in the service logs instead of emailed.
+      # Email (Namecheap Private Email on numvexs.com): sends the password reset code. Create the mailbox first, then fill in the three
+      # blank values on Render. Without them the API only prints the code in its logs and nobody receives it.
+      - key: SMTP_HOST
+        value: mail.privateemail.com
+      - key: SMTP_PORT
+        value: "465"
+      - key: SMTP_USER # the full mailbox address, e.g. support@numvexs.com
+        sync: false
+      - key: SMTP_PASS # that mailbox's password
+        sync: false
+      - key: EMAIL_FROM # e.g. NumVex <support@numvexs.com>. Must be the mailbox above.
+        sync: false
       - key: JWT_ACCESS_SECRET
         generateValue: true
       - key: POCKETFI_API_TOKEN

@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useMe } from '@/lib/hooks';
 import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icons';
 import { Sidebar } from './sidebar';
 import { DashHeader } from './dash-header';
 import { PlainHeader } from './plain-header';
 import { InstallPrompt } from '@/components/pwa/install-prompt';
+import { SupportChat } from './support-chat';
+import { WelcomeModal } from './welcome-modal';
 import type { IconName } from '@/components/ui/icons';
 
 type Theme = 'light' | 'dark';
@@ -91,6 +91,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <div className="dash-root min-h-screen bg-bg" data-theme={theme}>
         <PlainHeader title={plain.title} icon={plain.icon} theme={theme} onToggleTheme={toggleTheme} />
         <main className="bg-bg-elevated px-5 pb-16 pt-10 sm:px-10">{children}</main>
+        <WelcomeModal name={me.data.user.username} />
       </div>
     );
   }
@@ -111,14 +112,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      {/* Floating support button, bottom right */}
-      <Link
-        href="/dashboard/support"
-        aria-label="Support"
-        className="fixed bottom-6 right-6 z-20 grid h-[52px] w-[52px] place-items-center rounded-full bg-accent text-accent-contrast shadow-[0_14px_30px_-10px_var(--accent-ring)] transition-transform hover:-translate-y-0.5"
-      >
-        <Icon name="support" size={24} />
-      </Link>
+      {/* Help chat (bottom right) and the once-per-sign-in popup that points to support and the channel */}
+      <SupportChat />
+      <WelcomeModal name={me.data.user.username} />
     </div>
   );
 }

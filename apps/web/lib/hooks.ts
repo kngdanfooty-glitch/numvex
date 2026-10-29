@@ -1,6 +1,7 @@
 'use client';
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { resetWelcomePopup } from '@/lib/support';
 import type {
   AuthResponse,
   BoostCatalog,
@@ -62,7 +63,10 @@ export function useLogin() {
     mutationFn: (body: LoginBody) =>
       apiFetch<LoginResponse>('/v1/auth/login', { method: 'POST', body }),
     onSuccess: (data) => {
-      if ('user' in data) qc.setQueryData(ME_KEY, data);
+      if ('user' in data) {
+        resetWelcomePopup(); // a fresh sign-in sees the support popup again
+        qc.setQueryData(ME_KEY, data);
+      }
     },
   });
 }
@@ -72,7 +76,10 @@ export function useVerifyTwoFactor() {
   return useMutation({
     mutationFn: (body: VerifyTwoFactorBody) =>
       apiFetch<AuthResponse>('/v1/auth/2fa/verify', { method: 'POST', body }),
-    onSuccess: (data) => qc.setQueryData(ME_KEY, data),
+    onSuccess: (data) => {
+      resetWelcomePopup();
+      qc.setQueryData(ME_KEY, data);
+    },
   });
 }
 
@@ -81,7 +88,10 @@ export function useRegister() {
   return useMutation({
     mutationFn: (body: RegisterBody) =>
       apiFetch<AuthResponse>('/v1/auth/register', { method: 'POST', body }),
-    onSuccess: (data) => qc.setQueryData(ME_KEY, data), // signed in at once: email verification is off for now
+    onSuccess: (data) => {
+      resetWelcomePopup();
+      qc.setQueryData(ME_KEY, data); // signed in at once: email verification is off for now
+    },
   });
 }
 
@@ -120,7 +130,10 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => apiFetch<{ ok: true }>('/v1/auth/logout', { method: 'POST' }),
     // Whether or not the server call worked, forget everything we cached about the user.
-    onSettled: () => qc.clear(),
+    onSettled: () => {
+      resetWelcomePopup();
+      qc.clear();
+    },
   });
 }
 

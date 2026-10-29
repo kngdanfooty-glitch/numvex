@@ -9,7 +9,7 @@ services:
   - type: web
     name: numvexs-api
     runtime: node
-    plan: free # sleeps after 15 idle minutes; switch to starter (about $7/month) for always-on
+    plan: starter # always on (about $7/month): the free plan sleeps and the website then answers 502 while the API wakes
     region: frankfurt
     branch: main
     buildCommand: npm ci --include=dev && npm run build -w @numvexs/api

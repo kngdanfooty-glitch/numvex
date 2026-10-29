@@ -9,7 +9,7 @@ services:
   - type: web
     name: numvexs-api
     runtime: node
-    plan: free # sleeps after 15 idle minutes (the website waits for it to wake); switch to starter (about $7/month) for always-on
+    plan: starter # always on, and allowed to send mail (about $7/month). The free plan sleeps and blocks outgoing mail connections
     region: frankfurt
     branch: main
     buildCommand: npm ci --include=dev && npm run build -w @numvexs/api

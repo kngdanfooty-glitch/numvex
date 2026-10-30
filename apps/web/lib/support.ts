@@ -1,6 +1,11 @@
-/** Where people reach NumVex: the support chat and the news channel, both on Telegram. */
-export const SUPPORT_URL = 'https://t.me/numvexs';
-export const CHANNEL_URL = 'https://t.me/numvexs1';
+/**
+ * Where people reach NumVex: the support chat and the news channel, both on Telegram.
+ * Set NEXT_PUBLIC_SUPPORT_URL and NEXT_PUBLIC_CHANNEL_URL to change them without touching the code. Next.js bakes these in when
+ * the site is BUILT, so after changing one on Render the website must be redeployed (Manual Deploy, "Clear build cache & deploy").
+ * The names must be written out in full like this, or Next.js cannot find them. An empty value falls back to the default.
+ */
+export const SUPPORT_URL = process.env.NEXT_PUBLIC_SUPPORT_URL?.trim() || 'https://t.me/numvexs';
+export const CHANNEL_URL = process.env.NEXT_PUBLIC_CHANNEL_URL?.trim() || 'https://t.me/numvexs1';
 
 /** Spread onto an <a> so the link opens in a new tab without handing the new page a reference to ours. */
 export const EXTERNAL_LINK = { target: '_blank', rel: 'noopener noreferrer' } as const;

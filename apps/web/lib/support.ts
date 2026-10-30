@@ -5,7 +5,7 @@
  * The names must be written out in full like this, or Next.js cannot find them. An empty value falls back to the default.
  */
 export const SUPPORT_URL = process.env.NEXT_PUBLIC_SUPPORT_URL?.trim() || 'https://t.me/numvexs';
-export const CHANNEL_URL = process.env.NEXT_PUBLIC_CHANNEL_URL?.trim() || 'https://t.me/numvexs1';
+export const CHANNEL_URL = process.env.NEXT_PUBLIC_CHANNEL_URL?.trim() || 'https://t.me/numvexs0';
 
 /** Spread onto an <a> so the link opens in a new tab without handing the new page a reference to ours. */
 export const EXTERNAL_LINK = { target: '_blank', rel: 'noopener noreferrer' } as const;

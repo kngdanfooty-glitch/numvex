@@ -46,6 +46,7 @@ import type {
   VerifyTwoFactorBody,
 } from '@numvexs/shared';
 import { apiFetch } from './api';
+import { trackPurchase } from './tiktok';
 
 const ME_KEY = ['me'] as const;
 
@@ -203,7 +204,8 @@ export function useBuyNumber(server: NumberServerId) {
     // `country` for servers whose prices depend on it; `tier` is the price the buyer picked, for servers with several.
     mutationFn: (body: { service: string; country?: string; tier?: string }) =>
       apiFetch<{ activation: NumberActivation }>(`/v1/numbers/servers/${server}/buy`, { method: 'POST', body }),
-    onSuccess: () => {
+    onSuccess: ({ activation }) => {
+      trackPurchase('virtual_number', 'Virtual number', activation.costKobo);
       qc.invalidateQueries({ queryKey: ME_KEY }); // the wallet balance just changed
       qc.invalidateQueries({ queryKey: ['numbers', 'orders'] });
     },
@@ -412,7 +414,8 @@ export function useRentNumber(server: RentalServerId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: PlaceRentalBody) => apiFetch<{ rental: Rental }>(`/v1/rentals/servers/${server}/rentals`, { method: 'POST', body }),
-    onSuccess: () => {
+    onSuccess: ({ rental }) => {
+      trackPurchase('number_rental', 'Number rental', rental.costKobo);
       qc.invalidateQueries({ queryKey: ME_KEY });
       qc.invalidateQueries({ queryKey: ['rentals', 'mine'] });
     },

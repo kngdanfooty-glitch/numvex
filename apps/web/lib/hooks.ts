@@ -272,7 +272,8 @@ export function usePlaceBoostOrder(server: BoostServerId) {
   return useMutation({
     mutationFn: (body: PlaceBoostOrderBody) =>
       apiFetch<{ order: BoostOrder }>(`/v1/boost/servers/${server}/orders`, { method: 'POST', body }),
-    onSuccess: () => {
+    onSuccess: ({ order }) => {
+      trackPurchase('boost_order', 'Social media boost', order.costKobo);
       qc.invalidateQueries({ queryKey: ME_KEY }); // the wallet balance just changed
       qc.invalidateQueries({ queryKey: ['boost', 'orders'] });
     },
@@ -360,7 +361,8 @@ export function usePlaceEsimOrder(server: EsimServerId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: PlaceEsimOrderBody) => apiFetch<{ order: EsimOrder }>(`/v1/esim/servers/${server}/orders`, { method: 'POST', body }),
-    onSuccess: () => {
+    onSuccess: ({ order }) => {
+      trackPurchase('esim', 'eSIM', order.costKobo);
       qc.invalidateQueries({ queryKey: ME_KEY }); // the wallet balance just changed
       qc.invalidateQueries({ queryKey: ['esim', 'orders'] });
     },
@@ -456,6 +458,11 @@ export function useExtendRental(id: string) {
   return useMutation({
     mutationFn: (body: ExtendRentalBody) => apiFetch<{ rental: Rental }>(`/v1/rentals/rentals/${id}/extend`, { method: 'POST', body }),
     onSuccess: (d) => {
+      // `costKobo` is the running total for the rental, so what this extension cost is the difference.
+      const before = qc.getQueryData<{ rental: Rental }>(['rentals', 'one', id])?.rental.costKobo;
+      if (before !== undefined && d.rental.costKobo > before) {
+        trackPurchase('number_rental_extension', 'Number rental extension', d.rental.costKobo - before);
+      }
       qc.setQueryData(['rentals', 'one', id], d);
       qc.invalidateQueries({ queryKey: ME_KEY });
       qc.invalidateQueries({ queryKey: ['rentals', 'mine'] });
@@ -478,7 +485,8 @@ export function usePlaceTelegramOrder() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: PlaceTelegramOrderBody) => apiFetch<{ order: TelegramOrder }>('/v1/telegram/orders', { method: 'POST', body }),
-    onSuccess: () => {
+    onSuccess: ({ order }) => {
+      trackPurchase('telegram', 'Telegram Premium & Stars', order.costKobo);
       qc.invalidateQueries({ queryKey: ME_KEY }); // the wallet balance just changed
       qc.invalidateQueries({ queryKey: ['telegram', 'orders'] });
     },

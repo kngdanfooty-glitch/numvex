@@ -5,6 +5,7 @@ import { Section } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icons';
+import { LandingPixel } from '@/components/analytics/landing-pixel';
 import { HeroPreview } from '@/components/marketing/hero-preview';
 import { HERO_STATS, HOW_IT_WORKS, PERKS, PLATFORMS, SERVICES, WHY } from '@/components/marketing/content';
 
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <>
+      <LandingPixel />
       {/* Hero: light, centred, with a picture of the dashboard rising out of it */}
       <div className="relative overflow-hidden bg-[radial-gradient(60rem_26rem_at_50%_-6rem,rgba(37, 99, 235,0.16),transparent_70%)]">
         <Container size="wide" className="pb-20 pt-16 text-center sm:pt-24">

@@ -8,6 +8,7 @@ import { registerSchema } from '@numvexs/shared';
 import { useRegister } from '@/lib/hooks';
 import { errorMessage } from '@/lib/api';
 import { validate } from '@/lib/validation';
+import { identifyTikTokUser, trackTikTokEvent } from '@/lib/tiktok';
 import { AuthError, AuthIcon, PasswordField, SubmitButton, TextField } from '../auth-ui';
 
 // The API's register schema + two things only the form needs: "confirm password" and the terms box.
@@ -64,7 +65,15 @@ export function RegisterForm() {
       },
       // Email verification is off for now: they are already signed in, so go straight to the dashboard.
       // { onSuccess: () => router.push(`/verify-email?email=${encodeURIComponent(data.email)}`) },
-      { onSuccess: () => router.push('/dashboard') },
+      {
+        onSuccess: () => {
+          identifyTikTokUser({ email: data.email, phone_number: data.phone });
+          trackTikTokEvent('CompleteRegistration', {
+            contents: [{ content_id: 'registration', content_type: 'product', content_name: 'NumVex Account Registration' }],
+          });
+          router.push('/dashboard');
+        },
+      },
     );
   };
 

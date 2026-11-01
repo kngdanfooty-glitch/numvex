@@ -11,6 +11,7 @@ import { PlainHeader } from './plain-header';
 import { InstallPrompt } from '@/components/pwa/install-prompt';
 import { SupportChat } from './support-chat';
 import { WelcomeModal } from './welcome-modal';
+import { DepositTracker } from '@/components/analytics/deposit-tracker';
 import type { IconName } from '@/components/ui/icons';
 
 type Theme = 'light' | 'dark';
@@ -92,6 +93,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         <PlainHeader title={plain.title} icon={plain.icon} theme={theme} onToggleTheme={toggleTheme} />
         <main className="bg-bg-elevated px-5 pb-16 pt-10 sm:px-10">{children}</main>
         <WelcomeModal name={me.data.user.username} />
+        <DepositTracker />
       </div>
     );
   }
@@ -115,6 +117,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       {/* Help chat (bottom right) and the once-per-sign-in popup that points to support and the channel */}
       <SupportChat />
       <WelcomeModal name={me.data.user.username} />
+      <DepositTracker />
     </div>
   );
 }

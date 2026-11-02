@@ -46,7 +46,7 @@ import type {
   VerifyTwoFactorBody,
 } from '@numvexs/shared';
 import { apiFetch } from './api';
-import { trackPurchase } from './tiktok';
+import { identifyTikTokUser, trackPurchase } from './tiktok';
 
 const ME_KEY = ['me'] as const;
 
@@ -66,6 +66,7 @@ export function useLogin() {
     onSuccess: (data) => {
       if ('user' in data) {
         resetWelcomePopup(); // a fresh sign-in sees the support popup again
+        identifyTikTokUser({ email: data.user.email });
         qc.setQueryData(ME_KEY, data);
       }
     },
@@ -79,6 +80,7 @@ export function useVerifyTwoFactor() {
       apiFetch<AuthResponse>('/v1/auth/2fa/verify', { method: 'POST', body }),
     onSuccess: (data) => {
       resetWelcomePopup();
+      identifyTikTokUser({ email: data.user.email });
       qc.setQueryData(ME_KEY, data);
     },
   });

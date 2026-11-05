@@ -1,4 +1,5 @@
 import request from 'supertest';
+import type { HeardFrom } from '@numvexs/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../lib/mailer.js', () => ({ sendCodeEmail: async () => {} }));
@@ -21,12 +22,13 @@ const app = buildApp();
 afterEach(() => resetSettingsForTests());
 
 let counter = 0;
-interface Opts { role?: 'user' | 'admin'; adminRole?: string; adminPermissions?: string[]; balanceKobo?: number; status?: 'active' | 'suspended'; isVerified?: boolean }
+interface Opts { role?: 'user' | 'admin'; adminRole?: string; adminPermissions?: string[]; balanceKobo?: number; status?: 'active' | 'suspended'; isVerified?: boolean; heardFrom?: HeardFrom }
 async function person(o: Opts = {}) {
   const n = ++counter;
   const u = await User.create({
     email: `ap${n}@example.com`, username: `ap${n}`, usernameLower: `ap${n}`, phone: `+234809${String(7000000 + n)}`, passwordHash: 'x',
     isVerified: o.isVerified ?? true, role: o.role ?? 'user', balanceKobo: o.balanceKobo ?? 0, status: o.status ?? 'active',
+    ...(o.heardFrom ? { heardFrom: o.heardFrom } : {}),
     ...(o.adminRole ? { adminRole: o.adminRole } : {}), ...(o.adminPermissions ? { adminPermissions: o.adminPermissions } : {}),
   });
   // the token always says "admin": the server must decide from the DATABASE
@@ -119,6 +121,37 @@ describe('admin panel: dashboard', () => {
     expect(JSON.stringify(seen)).not.toContain('70000');
     const finance = await person({ role: 'admin', adminRole: 'finance_officer' });
     expect((await get(finance.cookie, '/dashboard')).body.totals.walletFloatKobo).toBe(70_000);
+  });
+});
+
+describe('admin panel: where sign-ups come from', () => {
+  it('counts sign-ups by what they answered, with how many added money, and old accounts as unknown', async () => {
+    const a = await superAdmin(); // made without an answer: an account from before the question existed
+    const t1 = await person({ heardFrom: 'tiktok' });
+    await person({ heardFrom: 'tiktok' });
+    await person({ heardFrom: 'friend' });
+    const old = await person({ heardFrom: 'instagram' });
+    await User.collection.updateOne({ _id: old.u._id }, { $set: { createdAt: T(60 * 24 * 90) } }); // joined 90 days ago (Mongoose will not let createdAt be edited)
+    // one TikTok person added money twice: still counted once. An uncredited transfer does not count.
+    await raw(WalletDeposit, { reference: 's-1', userId: t1.u._id, amountKobo: 100_000, status: 'credited', createdAt: T(10), updatedAt: T(10) });
+    await raw(WalletDeposit, { reference: 's-2', userId: t1.u._id, amountKobo: 100_000, status: 'credited', createdAt: T(9), updatedAt: T(9) });
+    await raw(WalletDeposit, { reference: 's-3', userId: old.u._id, amountKobo: 5_000, status: 'unmatched', createdAt: T(8), updatedAt: T(8) });
+
+    const rows = (await get(a.cookie, '/dashboard')).body.signupSources as { source: string; last30d: number; total: number; funded: number }[];
+    const by = Object.fromEntries(rows.map((r) => [r.source, r]));
+    expect(by.tiktok).toEqual({ source: 'tiktok', last30d: 2, total: 2, funded: 1 });
+    expect(by.friend).toEqual({ source: 'friend', last30d: 1, total: 1, funded: 0 });
+    expect(by.instagram).toEqual({ source: 'instagram', last30d: 0, total: 1, funded: 0 }); // joined long ago: all time only
+    expect(by.unknown).toMatchObject({ total: 1 }); // the admin account
+    expect(rows[0]!.source).toBe('tiktok'); // biggest first
+
+    // a support agent sees the same counts (they hold no naira), and the users list and a user's page show the answer
+    const agent = await person({ role: 'admin', adminRole: 'support_agent' });
+    expect(((await get(agent.cookie, '/dashboard')).body.signupSources as unknown[]).length).toBeGreaterThan(0);
+    const list = (await get(a.cookie, '/users?search=ap')).body.items as { id: string; heardFrom: string | null }[];
+    expect(list.find((u) => u.id === String(t1.u._id))!.heardFrom).toBe('tiktok');
+    expect((await get(a.cookie, `/users/${t1.u._id}`)).body.user.heardFrom).toBe('tiktok');
+    expect((await get(a.cookie, `/users/${a.u._id}`)).body.user.heardFrom).toBeNull();
   });
 });
 

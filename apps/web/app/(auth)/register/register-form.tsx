@@ -4,12 +4,12 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
-import { registerSchema } from '@numvexs/shared';
+import { HEARD_FROM_OPTIONS, registerSchema } from '@numvexs/shared';
 import { useRegister } from '@/lib/hooks';
 import { errorMessage } from '@/lib/api';
 import { validate } from '@/lib/validation';
 import { identifyTikTokUser, trackTikTokEvent } from '@/lib/tiktok';
-import { AuthError, AuthIcon, PasswordField, SubmitButton, TextField } from '../auth-ui';
+import { AuthError, AuthIcon, PasswordField, SelectField, SubmitButton, TextField } from '../auth-ui';
 
 // The API's register schema + two things only the form needs: "confirm password" and the terms box.
 const registerFormSchema = registerSchema
@@ -31,6 +31,7 @@ export function RegisterForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [heardFrom, setHeardFrom] = useState('');
   const [referral, setReferral] = useState(params.get('ref') ?? '');
   const [terms, setTerms] = useState(false);
 
@@ -48,6 +49,7 @@ export function RegisterForm() {
     terms,
     username,
     referralCode: referral || undefined,
+    heardFrom: heardFrom || undefined, // an empty choice is refused: the answer is required
   });
   const show = (field: string) => (submitted || touched[field] ? errors?.[field] : undefined);
 
@@ -62,6 +64,7 @@ export function RegisterForm() {
         password: data.password,
         username: data.username,
         referralCode: data.referralCode,
+        heardFrom: data.heardFrom,
       },
       // Email verification is off for now: they are already signed in, so go straight to the dashboard.
       // { onSuccess: () => router.push(`/verify-email?email=${encodeURIComponent(data.email)}`) },
@@ -142,6 +145,16 @@ export function RegisterForm() {
           onChange={setConfirm}
           onBlur={() => touch('confirm')}
           error={show('confirm')}
+        />
+        <SelectField
+          label="How did you hear about us?"
+          placeholder="Select one"
+          options={HEARD_FROM_OPTIONS}
+          disabled={register.isPending}
+          value={heardFrom}
+          onChange={setHeardFrom}
+          onBlur={() => touch('heardFrom')}
+          error={show('heardFrom')}
         />
         <TextField
           label="Referral code"

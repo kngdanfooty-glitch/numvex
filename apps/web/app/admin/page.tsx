@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { formatNaira } from '@numvexs/shared';
+import { formatNaira, heardFromLabel } from '@numvexs/shared';
 import { NeedModule } from '@/components/admin/admin-shell';
 import { BarChart, Card, Note, PageHeader, Signed, Stat, Table, Td, errorOf, when } from '@/components/admin/ui';
 import { useDashboard } from '@/lib/admin-hooks';
@@ -67,6 +67,34 @@ function Body({ d }: { d: NonNullable<ReturnType<typeof useDashboard>['data']> }
           <BarChart points={d.userGrowth} format={(v) => String(v)} color="var(--success)" />
         </Card>
       </div>
+
+      <Card
+        title="Where sign-ups come from"
+        hint={'What new people answered at sign-up ("How did you hear about us?"). "Funded" means they added money to their wallet at least once.'}
+      >
+        <Table head={['Source', 'Last 30 days', 'All time', 'Share', 'Funded']} empty="No sign-ups yet.">
+          {d.signupSources.map((s) => {
+            const everyone = d.signupSources.reduce((n, x) => n + x.total, 0) || 1;
+            const share = Math.round((s.total / everyone) * 100);
+            return (
+              <tr key={s.source}>
+                <Td className="font-semibold">{s.source === 'unknown' ? "Didn't say (signed up before this question)" : heardFromLabel(s.source)}</Td>
+                <Td>{s.last30d.toLocaleString()}</Td>
+                <Td>{s.total.toLocaleString()}</Td>
+                <Td>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-24 overflow-hidden rounded-full bg-surface-2">
+                      <div className="h-full rounded-full bg-accent" style={{ width: `${share}%` }} />
+                    </div>
+                    <span className="text-xs text-muted">{share}%</span>
+                  </div>
+                </Td>
+                <Td>{s.funded.toLocaleString()}</Td>
+              </tr>
+            );
+          })}
+        </Table>
+      </Card>
 
       <Card title="Latest orders" right={<Link href="/admin/orders" className="text-xs font-bold text-accent underline">All orders</Link>}>
         <Table head={d.recent.some((r) => r.amountKobo !== null) ? ['When', 'User', 'Order', 'Amount'] : ['When', 'User', 'Order']} empty="No orders yet.">

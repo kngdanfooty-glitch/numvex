@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { reasonSchema, whoSchema } from './admin';
+import type { HeardFrom } from './auth';
 
 /* ====================================================================================================================
  * The admin panel (modelled on FloZap's): who may open which section, and the shapes the panel reads and writes.
@@ -58,6 +59,14 @@ export interface DayPoint {
   day: string;
   value: number;
 }
+/** One row of "Where sign-ups come from". `source` is 'unknown' for accounts made before the question existed. */
+export interface SignupSource {
+  source: HeardFrom | 'unknown';
+  last30d: number;
+  total: number;
+  /** Of `total`, how many added money to their wallet at least once. */
+  funded: number;
+}
 export interface DashboardData {
   /** The three money totals are null for an admin without the Finance section (a support agent), and the server does not even work them out. */
   totals: { users: number; newUsers30d: number; walletFloatKobo: number | null; depositsTodayKobo: number | null; depositsMonthKobo: number | null };
@@ -66,6 +75,7 @@ export interface DashboardData {
   needsAttention: { unmatchedDeposits: number; telegramReview: number; stuckNumbers: number };
   revenueTrend: DayPoint[] | null; // kobo kept per day: charged minus refunded (null without Finance)
   userGrowth: DayPoint[];
+  signupSources: SignupSource[];
   recent: { id: string; title: string; user: string; amountKobo: number | null; createdAt: string }[];
 }
 
@@ -87,6 +97,7 @@ export interface AdminUserRow {
   status: 'active' | 'suspended';
   isVerified: boolean;
   balanceKobo: number;
+  heardFrom: HeardFrom | null;
   createdAt: string;
 }
 export interface Paged<T> {

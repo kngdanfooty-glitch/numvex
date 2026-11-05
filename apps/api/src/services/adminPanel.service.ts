@@ -5,6 +5,8 @@ import type {
   AdminUserRow,
   AuditEntry,
   DashboardData,
+  HeardFrom,
+  SignupSource,
   DayPoint,
   DepositListQuery,
   FinanceReport,
@@ -110,6 +112,7 @@ export async function dashboard(showMoney: boolean): Promise<DashboardData> {
   ]);
   const revenueTrend = !showMoney ? null : series(14, ...charged.map((map) => ({ map, sign: 1 as const })), ...refunded.map((map) => ({ map, sign: -1 as const })));
   const userGrowth = series(14, { map: await perDay(User, {}, 'createdAt', null, trendFrom), sign: 1 });
+  const signupSources = await signupSourcesReport(month);
 
   const latest = await Promise.all([
     Activation.find({}).sort({ createdAt: -1 }).limit(6),
@@ -134,8 +137,32 @@ export async function dashboard(showMoney: boolean): Promise<DashboardData> {
     needsAttention: { unmatchedDeposits: unmatched, telegramReview: review, stuckNumbers: stuck },
     revenueTrend,
     userGrowth,
+    signupSources,
     recent,
   };
+}
+
+/**
+ * "Where sign-ups come from": for each answer to "How did you hear about us?", how many people signed up (last 30 days and ever)
+ * and how many of them have added money to their wallet at least once. Accounts made before the question existed are 'unknown'.
+ * Counts only: no money, so every admin who can see the dashboard can see it.
+ */
+async function signupSourcesReport(since: Date): Promise<SignupSource[]> {
+  const [signups, funders] = await Promise.all([
+    User.aggregate<{ _id: SignupSource['source']; total: number; last30d: number }>([
+      { $group: { _id: { $ifNull: ['$heardFrom', 'unknown'] }, total: { $sum: 1 }, last30d: { $sum: { $cond: [{ $gte: ['$createdAt', since] }, 1, 0] } } } },
+    ]),
+    // each person counted once, however many deposits they made
+    WalletDeposit.aggregate<{ _id: SignupSource['source']; funded: number }>([
+      { $match: { status: 'credited', userId: { $ne: null } } },
+      { $group: { _id: '$userId' } },
+      { $lookup: { from: User.collection.name, localField: '_id', foreignField: '_id', as: 'u' } },
+      { $unwind: '$u' },
+      { $group: { _id: { $ifNull: ['$u.heardFrom', 'unknown'] }, funded: { $sum: 1 } } },
+    ]),
+  ]);
+  const funded = new Map(funders.map((f) => [f._id, f.funded]));
+  return signups.map((s) => ({ source: s._id, total: s.total, last30d: s.last30d, funded: funded.get(s._id) ?? 0 })).sort((a, b) => b.total - a.total);
 }
 
 /* ---------------- users ---------------- */
@@ -149,6 +176,7 @@ const userRow = (u: InstanceType<typeof User>): AdminUserRow => ({
   status: u.status as 'active' | 'suspended',
   isVerified: u.isVerified,
   balanceKobo: u.balanceKobo,
+  heardFrom: (u.heardFrom as HeardFrom | undefined) ?? null,
   createdAt: iso(u.createdAt),
 });
 

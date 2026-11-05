@@ -82,7 +82,7 @@ async function checkCode(email: string, purpose: CodePurpose, code: string) {
 /* ------------------------------------------------------------------ */
 
 export async function register(body: RegisterBody, res: Response) {
-  const { email, phone, password, referralCode } = body;
+  const { email, phone, password, referralCode, heardFrom } = body;
 
   // One account per email, verified or not. Someone else's half-finished sign-up is never overwritten:
   // its owner can sign in with their password to get a new code and finish verifying.
@@ -108,6 +108,7 @@ export async function register(body: RegisterBody, res: Response) {
     usernameLower,
     passwordHash,
     referredBy: referralCode || undefined,
+    heardFrom,
     isVerified: true, // TEMPORARY: emails are trusted for now (no verification code). To bring verification back, remove this line and uncomment sendCode below.
   });
 

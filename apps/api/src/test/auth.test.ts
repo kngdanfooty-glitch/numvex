@@ -21,6 +21,7 @@ const user = {
   phone: '0803 123 4567', // typed the way people type it; stored as +2348031234567
   password: 'Passw0rd!',
   username: 'bob_builder',
+  heardFrom: 'friend', // required at sign-up
 };
 
 beforeEach(() => {
@@ -56,11 +57,34 @@ describe('register', () => {
     expect((await User.findOne({ email: 'bob@example.com' }))!.isVerified).toBe(true);
   });
 
+  it('remembers the answer to "How did you hear about us?"', async () => {
+    const { User } = await import('../models/User.js');
+    await request(app).post('/api/v1/auth/register').send({ ...user, heardFrom: 'tiktok' }).expect(201);
+    expect((await User.findOne({ email: 'bob@example.com' }))!.heardFrom).toBe('tiktok');
+  });
+
+  it('will not sign anyone up who skips "How did you hear about us?"', async () => {
+    const { User } = await import('../models/User.js');
+    const { heardFrom: _skipped, ...withoutAnswer } = user;
+    const res = await request(app).post('/api/v1/auth/register').send(withoutAnswer);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('validation_error');
+    expect(res.body.error.details).toHaveProperty('heardFrom');
+    expect(await User.countDocuments({})).toBe(0);
+  });
+
+  it('refuses an answer that is not on the list, with a clear message', async () => {
+    const res = await request(app).post('/api/v1/auth/register').send({ ...user, heardFrom: 'a billboard' });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('validation_error');
+    expect(res.body.error.details).toHaveProperty('heardFrom');
+  });
+
   it('an account made before verification was switched off can sign in, and is marked verified', async () => {
     const { User } = await import('../models/User.js');
     await request(app).post('/api/v1/auth/register').send(user).expect(201);
     await User.updateOne({ email: 'bob@example.com' }, { isVerified: false });
-    await request(app).post('/api/v1/auth/login').send({ identifier: user.email, password: user.password }).expect(200);
+    await request(app).post('/api/v1/auth/login').send({ heardFrom: 'friend', identifier: user.email, password: user.password }).expect(200);
     expect((await User.findOne({ email: 'bob@example.com' }))!.isVerified).toBe(true);
     expect(sent).toHaveLength(0);
   });
@@ -73,7 +97,7 @@ describe('register', () => {
 
     const takenName = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'other@example.com', phone: '08098765432', password: 'Passw0rd!', username: 'BOB_builder' });
+      .send({ heardFrom: 'friend', email: 'other@example.com', phone: '08098765432', password: 'Passw0rd!', username: 'BOB_builder' });
     expect(takenName.body.error.code).toBe('username_taken');
   });
 
@@ -82,7 +106,7 @@ describe('register', () => {
     await request(app).post('/api/v1/auth/register').send(user).expect(201);
     const second = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'BOB@example.COM', phone: '08098765432', password: 'Different1!', username: 'someone_else' }); // capitals don't dodge it
+      .send({ heardFrom: 'friend', email: 'BOB@example.COM', phone: '08098765432', password: 'Different1!', username: 'someone_else' }); // capitals don't dodge it
     expect(second.status).toBe(409);
     expect(second.body.error.code).toBe('email_taken');
     expect(second.body.error.message).toBe('An account with this email already exists.'); // same words as for a verified account
@@ -102,23 +126,23 @@ describe('register', () => {
 
   it.skip("the unverified owner can still finish: sign in, use the new code, and they're in", async () => {
     await request(app).post('/api/v1/auth/register').send(user).expect(201);
-    await request(app).post('/api/v1/auth/login').send({ identifier: user.email, password: user.password }).expect(403); // sends a fresh code
+    await request(app).post('/api/v1/auth/login').send({ heardFrom: 'friend', identifier: user.email, password: user.password }).expect(403); // sends a fresh code
     const agent = request.agent(app);
     await agent.post('/api/v1/auth/verify-email').send({ email: user.email, code: lastCode('verify_email') }).expect(200);
   });
 
   it('a phone number or username held by an unverified sign-up is also taken', async () => {
     await request(app).post('/api/v1/auth/register').send(user).expect(201);
-    const samePhone = await request(app).post('/api/v1/auth/register').send({ email: 'p@example.com', phone: '2348031234567', password: 'Passw0rd!', username: 'phone_dup' });
+    const samePhone = await request(app).post('/api/v1/auth/register').send({ heardFrom: 'friend', email: 'p@example.com', phone: '2348031234567', password: 'Passw0rd!', username: 'phone_dup' });
     expect(samePhone.body.error.code).toBe('phone_taken');
-    const sameName = await request(app).post('/api/v1/auth/register').send({ email: 'n@example.com', phone: '08011112222', password: 'Passw0rd!', username: 'BOB_BUILDER' });
+    const sameName = await request(app).post('/api/v1/auth/register').send({ heardFrom: 'friend', email: 'n@example.com', phone: '08011112222', password: 'Passw0rd!', username: 'BOB_BUILDER' });
     expect(sameName.body.error.code).toBe('username_taken');
   });
 
   it('keeps the capitals the user typed in their username', async () => {
     await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'cap@example.com', phone: '07022222222', password: 'Passw0rd!', username: 'Abassgold' })
+      .send({ heardFrom: 'friend', email: 'cap@example.com', phone: '07022222222', password: 'Passw0rd!', username: 'Abassgold' })
       .expect(201);
     const agent = request.agent(app);
     await agent.post('/api/v1/auth/login').send({ identifier: 'cap@example.com', password: 'Passw0rd!' });
@@ -133,13 +157,13 @@ describe('register', () => {
   it('requires a username', async () => {
     const missing = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'nouser@example.com', phone: '08111111111', password: 'Passw0rd!' });
+      .send({ heardFrom: 'friend', email: 'nouser@example.com', phone: '08111111111', password: 'Passw0rd!' });
     expect(missing.status).toBe(400);
     expect(missing.body.error.message).toBe('Choose a username.');
 
     const blank = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'nouser@example.com', phone: '08111111111', username: '   ', password: 'Passw0rd!' });
+      .send({ heardFrom: 'friend', email: 'nouser@example.com', phone: '08111111111', username: '   ', password: 'Passw0rd!' });
     expect(blank.status).toBe(400);
     expect(blank.body.error.details).toHaveProperty('username');
   });
@@ -151,7 +175,7 @@ describe.skip('verify email', () => {
     await request(app).post('/api/v1/auth/register').send(user).expect(201);
     const res = await request(app)
       .post('/api/v1/auth/login')
-      .send({ identifier: user.email, password: user.password });
+      .send({ heardFrom: 'friend', identifier: user.email, password: user.password });
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('email_not_verified');
     expect(res.body.error.details.email).toBe('bob@example.com');
@@ -162,7 +186,7 @@ describe.skip('verify email', () => {
     const code = lastCode('verify_email');
     const wrong = code === '000000' ? '111111' : '000000';
 
-    const bad = await request(app).post('/api/v1/auth/verify-email').send({ email: user.email, code: wrong });
+    const bad = await request(app).post('/api/v1/auth/verify-email').send({ heardFrom: 'friend', email: user.email, code: wrong });
     expect(bad.status).toBe(400);
     expect(bad.body.error.code).toBe('invalid_code');
 
@@ -179,7 +203,7 @@ describe.skip('verify email', () => {
   it('only lets a code be used once', async () => {
     await request(app).post('/api/v1/auth/register').send(user);
     const code = lastCode('verify_email');
-    await request(app).post('/api/v1/auth/verify-email').send({ email: user.email, code }).expect(200);
+    await request(app).post('/api/v1/auth/verify-email').send({ heardFrom: 'friend', email: user.email, code }).expect(200);
     await request(app).post('/api/v1/auth/verify-email').send({ email: user.email, code }).expect(400);
   });
 
@@ -188,7 +212,7 @@ describe.skip('verify email', () => {
     const code = lastCode('verify_email');
     const wrong = code === '000000' ? '111111' : '000000';
     for (let i = 0; i < 5; i++) {
-      await request(app).post('/api/v1/auth/verify-email').send({ email: user.email, code: wrong });
+      await request(app).post('/api/v1/auth/verify-email').send({ heardFrom: 'friend', email: user.email, code: wrong });
     }
     const res = await request(app).post('/api/v1/auth/verify-email').send({ email: user.email, code });
     expect(res.status).toBe(429);
@@ -198,7 +222,7 @@ describe.skip('verify email', () => {
 
   it('does not email again inside the 30-second cooldown', async () => {
     await request(app).post('/api/v1/auth/register').send(user);
-    await request(app).post('/api/v1/auth/resend-verification').send({ email: user.email }).expect(200);
+    await request(app).post('/api/v1/auth/resend-verification').send({ heardFrom: 'friend', email: user.email }).expect(200);
     expect(sent).toHaveLength(1); // still only the first email
   });
 });
@@ -267,7 +291,7 @@ describe('forgot + reset password', () => {
     const verifyCode = lastCode('verify_email');
     const res = await request(app)
       .post('/api/v1/auth/reset-password')
-      .send({ email: user.email, code: verifyCode, password: 'BrandNew123' });
+      .send({ heardFrom: 'friend', email: user.email, code: verifyCode, password: 'BrandNew123' });
     expect(res.status).toBe(400);
   });
 });
@@ -348,7 +372,7 @@ describe('nigerian phone numbers', () => {
 
     const bad = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'a@example.com', phone: '+1 415 555 2671', username: 'someone', password: 'Passw0rd!' });
+      .send({ heardFrom: 'friend', email: 'a@example.com', phone: '+1 415 555 2671', username: 'someone', password: 'Passw0rd!' });
     expect(bad.status).toBe(400);
     expect(bad.body.error.message).toMatch(/Nigerian phone number/);
   });
@@ -362,7 +386,7 @@ describe('nigerian phone numbers', () => {
     await signUpAndVerify();
     const res = await request(app)
       .post('/api/v1/auth/register')
-      .send({ email: 'second@example.com', phone: '+234 803 123 4567', username: 'second_user', password: 'Passw0rd!' });
+      .send({ heardFrom: 'friend', email: 'second@example.com', phone: '+234 803 123 4567', username: 'second_user', password: 'Passw0rd!' });
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('phone_taken');
   });

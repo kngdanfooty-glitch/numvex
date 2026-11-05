@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { formatNaira } from '@numvexs/shared';
 import { NeedModule } from '@/components/admin/admin-shell';
+import { heardFromLabel } from '@numvexs/shared';
 import { Badge, FIELD, Note, PageHeader, Pager, Table, Td, errorOf, when } from '@/components/admin/ui';
 import { useAdminUsers } from '@/lib/admin-hooks';
 
@@ -45,7 +46,7 @@ function Users() {
 
       {q.isPending ? <Note>Loading…</Note> : q.isError ? <Note tone="error">{errorOf(q.error)}</Note> : (
         <>
-          <Table head={['User', 'Phone', 'Email', 'Balance', 'Status', 'Joined']} empty="No users match.">
+          <Table head={['User', 'Phone', 'Email', 'Balance', 'Status', 'Heard from', 'Joined']} empty="No users match.">
             {q.data.items.map((u) => (
               <tr key={u.id} className="hover:bg-surface-2">
                 <Td>
@@ -56,6 +57,7 @@ function Users() {
                 <Td><Badge>{u.isVerified ? 'verified' : 'not verified'}</Badge></Td>
                 <Td className="font-semibold">{formatNaira(u.balanceKobo)}</Td>
                 <Td><Badge>{u.status}</Badge></Td>
+                <Td className="text-muted">{heardFromLabel(u.heardFrom)}</Td>
                 <Td className="text-muted">{when(u.createdAt)}</Td>
               </tr>
             ))}

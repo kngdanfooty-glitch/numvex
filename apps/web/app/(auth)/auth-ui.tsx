@@ -95,6 +95,52 @@ export function TextField({
   );
 }
 
+/* ---------- dropdown field ---------- */
+
+export function SelectField({
+  label,
+  optional,
+  hint,
+  error,
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+  onBlur,
+}: {
+  label: string;
+  optional?: boolean;
+  hint?: string;
+  error?: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly { value: string; label: string }[];
+  /** The first, empty choice, e.g. "Select one". */
+  placeholder: string;
+  disabled?: boolean;
+  onBlur?: () => void;
+}) {
+  const id = useId();
+  return (
+    <div className="field">
+      <label htmlFor={id}>
+        {label} {optional ? <span className="optional">(optional)</span> : null}
+      </label>
+      <select id={id} className={cn(!value && 'is-empty')} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} onBlur={onBlur}>
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {error ? <span className="field-error">{error}</span> : null}
+      {hint && !error ? <span className="field-hint">{hint}</span> : null}
+    </div>
+  );
+}
+
 /* ---------- password field with show/hide toggle ---------- */
 
 export function PasswordField({

@@ -1,4 +1,5 @@
 import { Schema, model } from 'mongoose';
+import { HEARD_FROM_VALUES } from '@numvexs/shared';
 
 /*
  * A user account.
@@ -26,6 +27,8 @@ const userSchema = new Schema(
     balanceKobo: { type: Number, default: 0 },
     twoFactorEnabled: { type: Boolean, default: false },
     referredBy: { type: String },
+    // "How did you hear about us?" at sign-up. Only a label like 'tiktok' is kept, nothing about the person's browsing.
+    heardFrom: { type: String, enum: HEARD_FROM_VALUES },
   },
   { timestamps: true },
 );

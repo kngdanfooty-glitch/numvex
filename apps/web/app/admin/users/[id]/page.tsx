@@ -3,7 +3,7 @@
 import { capitalize } from '@/lib/name';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { formatNaira } from '@numvexs/shared';
+import { formatNaira, heardFromLabel } from '@numvexs/shared';
 import { NeedModule, useAdmin } from '@/components/admin/admin-shell';
 import { Badge, Card, Note, PageHeader, ReasonConfirm, Stat, errorOf, when } from '@/components/admin/ui';
 import { useAdminUser, useSuspend } from '@/lib/admin-hooks';
@@ -41,6 +41,7 @@ function UserPage() {
       <Card title="About this account">
         <dl className="grid gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2">
           <Row k="Joined" v={when(u.createdAt)} />
+          <Row k="Heard about us from" v={heardFromLabel(u.heardFrom)} />
           <Row k="Email verified" v={u.isVerified ? 'Yes' : 'No'} />
           <Row k="Role" v={u.role} />
           <Row k="Bank account for funding" v={u.account ? `${u.account.bankName} · ${u.account.accountNumber}` : 'None yet'} />

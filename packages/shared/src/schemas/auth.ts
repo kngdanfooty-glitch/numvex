@@ -38,6 +38,27 @@ export const codeSchema = z
   .string()
   .regex(new RegExp(`^\\d{${AUTH_CODE_LENGTH}}$`), `Enter the ${AUTH_CODE_LENGTH}-digit code.`);
 
+/* ---------- "How did you hear about us?" ---------- */
+
+/** The answers on the sign-up dropdown. `value` is what we store (and count in the admin); `label` is what people see. */
+export const HEARD_FROM_OPTIONS = [
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'x', label: 'X (Twitter)' },
+  { value: 'youtube', label: 'YouTube' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'friend', label: 'A friend' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+/** The words for a stored answer (and for "no answer": accounts made before the question existed). */
+export const heardFromLabel = (v: string | null | undefined): string =>
+  v ? (HEARD_FROM_OPTIONS.find((o) => o.value === v)?.label ?? v) : "Didn't say";
+
+export type HeardFrom = (typeof HEARD_FROM_OPTIONS)[number]['value'];
+export const HEARD_FROM_VALUES = HEARD_FROM_OPTIONS.map((o) => o.value) as [HeardFrom, ...HeardFrom[]];
+
 /* ---------- request bodies (one per endpoint) ---------- */
 
 export const registerSchema = z.object({
@@ -46,6 +67,8 @@ export const registerSchema = z.object({
   password: passwordSchema,
   username: usernameSchema,
   referralCode: z.string().trim().max(32).optional(),
+  // Required: one of the listed answers. It feeds the admin's "Where sign-ups come from" report.
+  heardFrom: z.enum(HEARD_FROM_VALUES, 'Please tell us how you heard about us.'),
 });
 
 export const loginSchema = z.object({

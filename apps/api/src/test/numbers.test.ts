@@ -62,6 +62,9 @@ async function loggedInUser(balanceKobo: number) {
   return { user, cookie: `${ACCESS_COOKIE}=${signAccessToken(String(user._id), 'user')}` };
 }
 
+/** Make an activation look 6 minutes old, so the 5-minute cancel lock is over. */
+const ageActivation = (id: unknown) => Activation.collection.updateOne({ _id: new mongoose.Types.ObjectId(String(id)) }, { $set: { createdAt: new Date(Date.now() - 6 * 60_000) } });
+
 describe('numbers: DaisySMS buying', () => {
   it('quotes the naira price', async () => {
     const { cookie } = await loggedInUser(0);
@@ -181,7 +184,10 @@ describe('numbers: DaisySMS buying', () => {
     const { user, cookie } = await loggedInUser(COST);
     const bought = await request(app).post('/api/v1/numbers/servers/daisysms/buy').set('Cookie', cookie).send({ service: 'amazon' });
     const id = bought.body.activation.id;
+    await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(409); // too early
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect((await User.findById(user._id))!.balanceKobo).toBe(COST);
     expect((await Activation.findById(id))!.status).toBe('cancelled');
@@ -302,7 +308,9 @@ describe('numbers: TextVerified buying', () => {
   it('cancels and refunds once, and signs in only once', async () => {
     const { user, cookie, res } = await buyOne();
     const id = res.body.activation.id;
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect((await User.findById(user._id))!.balanceKobo).toBe(COST);
     expect(calls.filter((c) => c === 'POST /auth').length).toBeLessThanOrEqual(1);
@@ -471,13 +479,16 @@ describe('numbers: refund job, mark as done, flaky networks', () => {
 
   it('a cancel that cannot reach the provider answers "try again" (not an error), keeps the number, and loses nothing', async () => {
     const n = await pendingNumber(10 * MIN, '951');
+    await ageActivation(n.id);
     vi.stubGlobal('fetch', async () => { throw connectTimeout(); });
+    await ageActivation(n.id);
     const res = await request(app).post(`/api/v1/numbers/activations/${n.id}/cancel`).set('Cookie', n.cookie).expect(200);
     expect([res.body.activation.status, res.body.refused]).toEqual(['pending', true]);
     expect(await walletOf(n)).toBe(0);
     // ...and once the provider is reachable again, the same button works and refunds once
     vi.unstubAllGlobals();
     vi.stubGlobal('fetch', async () => new Response('ACCESS_CANCEL'));
+    await ageActivation(n.id);
     const again = await request(app).post(`/api/v1/numbers/activations/${n.id}/cancel`).set('Cookie', n.cookie).expect(200);
     expect([again.body.activation.status, again.body.refused]).toEqual(['cancelled', false]);
     expect(await walletOf(n)).toBe(COST);
@@ -486,6 +497,7 @@ describe('numbers: refund job, mark as done, flaky networks', () => {
   it('a cancel while the provider says slow down answers "try again" too', async () => {
     provider.setStatus = 'RATE_LIMIT_EXCEEDED';
     const n = await pendingNumber(10 * MIN, '952');
+    await ageActivation(n.id);
     const res = await request(app).post(`/api/v1/numbers/activations/${n.id}/cancel`).set('Cookie', n.cookie).expect(200);
     expect(res.body.refused).toBe(true);
     expect(await statusOf(n.id)).toBe('pending');
@@ -629,6 +641,7 @@ describe('poll job protections: back-off and per-provider cap', () => {
       userId: u.user._id, server: 'daisysms', providerOrderId: '931', number: '+12025550123', service: 'amazon',
       country: 'United States', costKobo: COST, expiresAt: new Date(Date.now() + 10 * MIN),
     });
+    await ageActivation(a._id);
     const res = await request(app).post(`/api/v1/numbers/activations/${a._id}/cancel`).set('Cookie', u.cookie).expect(200);
     expect(res.body.activation.status).toBe('pending');
   });
@@ -747,11 +760,13 @@ describe('numbers: HeroSMS (price tiers, countries, early-cancel)', () => {
     const { user, cookie, res } = await buyUk(T2.costKobo);
     const id = res.body.activation.id;
     hero.cancelActivation = { status: 409, body: '{"title":"EARLY_CANCEL_DENIED"}' };
+    await ageActivation(id);
     const early = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([early.body.activation.status, early.body.refused]).toEqual(['pending', true]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(0);
 
     hero.cancelActivation = { status: 204, body: '' };
+    await ageActivation(id);
     const later = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([later.body.activation.status, later.body.refused]).toEqual(['cancelled', false]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(T2.costKobo);
@@ -865,7 +880,9 @@ describe('numbers: SMSBower (provider price tiers, instant cancel)', () => {
   it('cancels at once with setStatus 8 and refunds once', async () => {
     const { user, cookie, res } = await buyUk(CHEAP.costKobo);
     const id = res.body.activation.id;
+    await ageActivation(id);
     const first = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([first.body.activation.status, first.body.refused]).toEqual(['cancelled', false]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(CHEAP.costKobo);
@@ -1017,12 +1034,15 @@ describe('numbers: SMSPool (cheapest / best-success options)', () => {
     const { user, cookie, res } = await buyUk(LOW.costKobo);
     const id = res.body.activation.id;
     pool['/sms/cancel'] = { body: { success: 0, message: 'Your order cannot be cancelled yet, please try again later.' } };
+    await ageActivation(id);
     const early = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([early.body.activation.status, early.body.refused]).toEqual(['pending', true]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(0);
 
     pool['/sms/cancel'] = { body: { success: 1 } };
+    await ageActivation(id);
     const later = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([later.body.activation.status, later.body.refused]).toEqual(['cancelled', false]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(LOW.costKobo);
@@ -1159,7 +1179,9 @@ describe('numbers: JuicySMS (EUR prices, one open order at a time)', () => {
   it('cancels (free) and refunds once', async () => {
     const { user, cookie, res } = await buyNl();
     const id = res.body.activation.id;
+    await ageActivation(id);
     const first = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([first.body.activation.status, first.body.refused]).toEqual(['cancelled', false]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(PRICE);
@@ -1169,6 +1191,7 @@ describe('numbers: JuicySMS (EUR prices, one open order at a time)', () => {
     const { user, cookie, res } = await buyNl();
     juicy['POST /orders/8100/cancel'] = problem(409, 'order_not_open');
     juicy['GET /orders/8100/messages'] = { body: { order_id: 8100, order_status: 'completed', data: [{ code: '246810', text: 'x', sender: 'X' }] } };
+    await ageActivation(res.body.activation.id);
     const out = await request(app).post(`/api/v1/numbers/activations/${res.body.activation.id}/cancel`).set('Cookie', cookie).expect(200);
     expect(out.body.activation).toMatchObject({ status: 'completed', code: '246810' });
     expect((await User.findById(user._id))!.balanceKobo).toBe(0);
@@ -1301,6 +1324,7 @@ describe('numbers: 5sim (operator price tiers, plain-text errors)', () => {
     const a = await request(app).get(`/api/v1/numbers/activations/${got.res.body.activation.id}`).set('Cookie', got.cookie).expect(200);
     expect([a.body.activation.status, a.body.activation.code]).toEqual(['pending', null]);
     // and it still cancels and refunds like any waiting number
+    await ageActivation(got.res.body.activation.id);
     const out = await request(app).post(`/api/v1/numbers/activations/${got.res.body.activation.id}/cancel`).set('Cookie', got.cookie).expect(200);
     expect(out.body.activation.status).toBe('cancelled');
     expect((await User.findById(got.user._id))!.balanceKobo).toBe(CHEAP.costKobo);
@@ -1318,12 +1342,15 @@ describe('numbers: 5sim (operator price tiers, plain-text errors)', () => {
     const { user, cookie, res } = await buyUsa(CHEAP.costKobo);
     const id = res.body.activation.id;
     sim['/v1/user/cancel/555'] = { status: 400, body: 'you need to wait time' };
+    await ageActivation(id);
     const early = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([early.body.activation.status, early.body.refused]).toEqual(['pending', true]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(0);
 
     sim['/v1/user/cancel/555'] = { body: order('CANCELED') };
+    await ageActivation(id);
     const later = await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
+    await ageActivation(id);
     await request(app).post(`/api/v1/numbers/activations/${id}/cancel`).set('Cookie', cookie).expect(200);
     expect([later.body.activation.status, later.body.refused]).toEqual(['cancelled', false]);
     expect((await User.findById(user._id))!.balanceKobo).toBe(CHEAP.costKobo);
@@ -1333,6 +1360,7 @@ describe('numbers: 5sim (operator price tiers, plain-text errors)', () => {
     const { user, cookie, res } = await buyUsa(CHEAP.costKobo);
     sim['/v1/user/cancel/555'] = { status: 400, body: 'order has sms' };
     sim['/v1/user/check/555'] = { body: order('RECEIVED', [{ code: '778899', text: 'x' }]) };
+    await ageActivation(res.body.activation.id);
     const out = await request(app).post(`/api/v1/numbers/activations/${res.body.activation.id}/cancel`).set('Cookie', cookie).expect(200);
     expect(out.body.activation).toMatchObject({ status: 'completed', code: '778899' });
     expect((await User.findById(user._id))!.balanceKobo).toBe(0);
@@ -1363,11 +1391,13 @@ describe('numbers: a failed purchase is refunded, and a cancel is all-or-nothing
     const { user, cookie } = await loggedInUser(COST);
     const bought = await buyNow(cookie).expect(201);
     const spy = vi.spyOn(User, 'updateOne').mockImplementationOnce((() => { throw new Error('boom'); }) as never);
+    await ageActivation(bought.body.activation.id);
     const failed = await request(app).post(`/api/v1/numbers/activations/${bought.body.activation.id}/cancel`).set('Cookie', cookie);
     spy.mockRestore();
     expect(failed.status).toBe(500);
     expect((await Activation.findById(bought.body.activation.id))!.status).toBe('pending'); // not half-cancelled
     expect((await User.findById(user._id))!.balanceKobo).toBe(0);
+    await ageActivation(bought.body.activation.id);
     await request(app).post(`/api/v1/numbers/activations/${bought.body.activation.id}/cancel`).set('Cookie', cookie).expect(200);
     expect((await User.findById(user._id))!.balanceKobo).toBe(COST); // refunded once
   });

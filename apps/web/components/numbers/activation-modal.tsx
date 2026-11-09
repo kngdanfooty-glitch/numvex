@@ -21,6 +21,21 @@ function useCountdown(expiresAt: string | undefined) {
   return { text: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`, ended: left === 0 };
 }
 
+/** Cancelling is allowed 5 minutes after the purchase (the server enforces it too). Returns the whole minutes/seconds left to wait. */
+const CANCEL_AFTER_MS = 5 * 60 * 1000;
+function useCancelWait(createdAt: string | undefined) {
+  const [left, setLeft] = useState(0);
+  useEffect(() => {
+    if (!createdAt) return;
+    const tick = () => setLeft(Math.max(0, new Date(createdAt).getTime() + CANCEL_AFTER_MS - Date.now()));
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [createdAt]);
+  const s = Math.ceil(left / 1000);
+  return { locked: left > 0, text: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` };
+}
+
 function CopyIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -72,6 +87,7 @@ export function ActivationModal({ id, onClose }: { id: string; onClose: (finishe
   const markDone = useMarkNumberDone();
   const a = query.data?.activation;
   const { text: timeLeft, ended } = useCountdown(a?.expiresAt);
+  const { locked: cancelLocked, text: cancelIn } = useCancelWait(a?.createdAt);
 
   const waiting = a?.status === 'pending';
   const done = a?.status === 'completed';
@@ -169,11 +185,11 @@ export function ActivationModal({ id, onClose }: { id: string; onClose: (finishe
                 <>
                   <button
                     type="button"
-                    disabled={cancel.isPending}
+                    disabled={cancel.isPending || cancelLocked}
                     onClick={() => cancel.mutate(a.id)}
                     className="w-full cursor-pointer rounded-md border border-danger/30 bg-danger/10 py-2.5 text-xs font-bold uppercase text-danger transition-all hover:border-danger hover:bg-danger hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {cancel.isPending ? 'Cancelling...' : 'Cancel Order'}
+                    {cancel.isPending ? 'Cancelling...' : cancelLocked ? `Cancel available in ${cancelIn}` : 'Cancel Order'}
                   </button>
                   <button type="button" onClick={() => onClose(false)} className="mt-2 w-full cursor-pointer py-1.5 text-xs font-semibold text-muted hover:text-text">
                     Hide (keep waiting in the background)

@@ -23,6 +23,8 @@ import { rates } from './settings.service.js';
  * (we never promise a number longer than the provider will keep it); one that holds it for 15-20 minutes is cancelled at 7.
  */
 export const WAIT_MS = 7 * 60 * 1000;
+/** A user can't cancel a number until it is this old (so a code has a fair chance to arrive). The jobs still refund an expired number. */
+export const CANCEL_AFTER_MS = 5 * 60 * 1000;
 /** A number with no code this long after the purchase is refunded without asking the provider (a provider that won't cancel can't hold the money). */
 export const FORCE_REFUND_MS = 15 * 60 * 1000;
 export const waitingUntil = (providerEnds: Date | undefined, providerLifetimeMs: number, now = Date.now()): Date =>
@@ -354,6 +356,10 @@ export async function markDone(userId: string, id: string) {
 export async function cancel(userId: string, id: string) {
   const activation = await mine(userId, id);
   if (activation.status !== 'pending') return { activation, refused: false };
+  const wait = CANCEL_AFTER_MS - (Date.now() - activation.createdAt.getTime());
+  if (wait > 0) {
+    throw conflict('cancel_too_early', `You can cancel this number in ${Math.ceil(wait / 60000)} min. Please wait for the code first.`);
+  }
   let cancelled: boolean;
   try {
     cancelled = await providerFor(activation.server).cancel(activation.providerOrderId);

@@ -159,12 +159,47 @@ const adapters: Record<NumberServerId, () => Promise<Omit<NumberCatalog, 'server
   },
 };
 
+/** A catalogue older than this is still shown at once while a fresh one is fetched behind it (a provider outage never blanks the page). */
+const STALE_MS = 60 * 60 * 1000;
+const refreshing = new Map<NumberServerId, Promise<NumberCatalog>>();
+
+/** Fetch one server's catalogue from its provider. Several callers at once share ONE provider call instead of each making their own. */
+function refreshCatalog(server: NumberServerId): Promise<NumberCatalog> {
+  const running = refreshing.get(server);
+  if (running) return running;
+  const p = (async () => {
+    const data: NumberCatalog = { server, ...(await adapters[server]()) };
+    cache.set(server, { at: Date.now(), data });
+    return data;
+  })().finally(() => refreshing.delete(server));
+  refreshing.set(server, p);
+  return p;
+}
+
 export async function getCatalog(server: NumberServerId): Promise<NumberCatalog> {
   const hit = cache.get(server);
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
-  const data: NumberCatalog = { server, ...(await adapters[server]()) };
-  cache.set(server, { at: Date.now(), data });
-  return data;
+  if (hit) {
+    const age = Date.now() - hit.at;
+    if (age < CACHE_MS) return hit.data;
+    // Expired but recent enough: answer instantly and refresh in the background, so no visitor waits for the provider.
+    if (age < STALE_MS) {
+      refreshCatalog(server).catch(() => undefined);
+      return hit.data;
+    }
+  }
+  return refreshCatalog(server);
+}
+
+/**
+ * Fill (or top up) every server's catalogue ahead of visitors, one server at a time (never all at once). A server that is not set up
+ * or is down is skipped quietly: its tab will show the usual message when someone opens it.
+ */
+export async function warmCatalogs(): Promise<void> {
+  for (const server of Object.keys(adapters) as NumberServerId[]) {
+    const hit = cache.get(server);
+    if (hit && Date.now() - hit.at < CACHE_MS / 2) continue;
+    await refreshCatalog(server).catch(() => undefined);
+  }
 }
 
 /* ------------------------------------------------------------------ */

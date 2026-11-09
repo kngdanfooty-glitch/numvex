@@ -7,6 +7,7 @@ import { startRentalJob } from './jobs/rentalJob.js';
 import { startTelegramJob } from './jobs/telegramJob.js';
 import { startPollJob } from './jobs/pollJob.js';
 import { startRefundJob } from './jobs/refundJob.js';
+import { warmCatalogs } from './services/numbers.service.js';
 
 async function main() {
   await connectMongo();
@@ -24,8 +25,14 @@ async function main() {
   const stopBoostJob = startBoostJob(); // every minute: follows open boost orders at their panels (status, refunds)
   const stopRefundJob = startRefundJob(); // every minute: settles numbers that expired without a code (refund)
 
+  // Keep every server's number list ready so a visitor never waits for the providers (2-5s each when cold, and Render restarts empty).
+  void warmCatalogs();
+  const warmTimer = setInterval(() => void warmCatalogs(), 2 * 60 * 1000);
+  warmTimer.unref();
+
   // Close cleanly on Ctrl+C / deploy restarts.
   const shutdown = () => {
+    clearInterval(warmTimer);
     stopPollJob();
     stopBoostJob();
     stopTelegramJob();

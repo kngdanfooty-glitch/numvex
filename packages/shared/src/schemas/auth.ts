@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { phoneSchema } from './phone';
+import { isBrandEmail, isReservedUsername } from './reserved';
 
 /*
  * Auth validation rules — written ONCE here, used by BOTH the web forms and the
@@ -61,11 +62,15 @@ export const HEARD_FROM_VALUES = HEARD_FROM_OPTIONS.map((o) => o.value) as [Hear
 
 /* ---------- request bodies (one per endpoint) ---------- */
 
+// For creating an account only (login keeps accepting whatever exists): no names or addresses that pass for ours or for staff.
+const newEmailSchema = emailSchema.refine((e) => !isBrandEmail(e), 'Please use your own personal email address.');
+const newUsernameSchema = usernameSchema.refine((u) => !isReservedUsername(u), 'That username is not available. Please choose another.');
+
 export const registerSchema = z.object({
-  email: emailSchema,
+  email: newEmailSchema,
   phone: phoneSchema,
   password: passwordSchema,
-  username: usernameSchema,
+  username: newUsernameSchema,
   referralCode: z.string().trim().max(32).optional(),
   // Required: one of the listed answers. It feeds the admin's "Where sign-ups come from" report.
   heardFrom: z.enum(HEARD_FROM_VALUES, 'Please tell us how you heard about us.'),

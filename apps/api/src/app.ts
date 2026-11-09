@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { AppError } from './lib/errors.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { requestLog } from './middleware/requestLog.js';
+import { noSqlInjection } from './middleware/noSqlInjection.js';
 import authRoutes from './routes/auth.routes.js';
 import boostRoutes from './routes/boost.routes.js';
 import esimRoutes from './routes/esim.routes.js';
@@ -30,6 +31,8 @@ export function buildApp(): Application {
   // read JSON bodies (and refuse huge ones). The raw bytes are kept too: webhook signatures are checked against them.
   app.use(express.json({ limit: '10kb', verify: (req, _res, buf) => { (req as unknown as { rawBody?: Buffer }).rawBody = buf; } }));
   app.use(cookieParser()); // read cookies
+
+  app.use('/api/v1', noSqlInjection); // refuse { "$ne": ... } style keys anywhere in a request (see the file for why)
 
   app.get('/health', (_req, res) => {
     res.json({ ok: true });

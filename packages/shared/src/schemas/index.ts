@@ -9,3 +9,4 @@ export * from './adminPanel';
 export * from './telegram';
 export * from './rentals';
 export * from './esim';
+export * from './reserved';

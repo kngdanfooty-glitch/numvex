@@ -70,7 +70,7 @@ function Body({ d }: { d: NonNullable<ReturnType<typeof useDashboard>['data']> }
 
       <Card
         title="Where sign-ups come from"
-        hint={'What new people answered at sign-up ("How did you hear about us?"). "Funded" means they added money to their wallet at least once.'}
+        hint={'Where new people came from, taken from the link they arrived on (e.g. ?source=tiktok). "Funded" means they added money to their wallet at least once.'}
       >
         <Table head={['Source', 'Last 30 days', 'All time', 'Share', 'Funded']} empty="No sign-ups yet.">
           {d.signupSources.map((s) => {
@@ -78,7 +78,7 @@ function Body({ d }: { d: NonNullable<ReturnType<typeof useDashboard>['data']> }
             const share = Math.round((s.total / everyone) * 100);
             return (
               <tr key={s.source}>
-                <Td className="font-semibold">{s.source === 'unknown' ? "Didn't say (signed up before this question)" : heardFromLabel(s.source)}</Td>
+                <Td className="font-semibold">{s.source === 'unknown' ? "No source link" : heardFromLabel(s.source)}</Td>
                 <Td>{s.last30d.toLocaleString()}</Td>
                 <Td>{s.total.toLocaleString()}</Td>
                 <Td>

@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { Providers } from './providers';
 import { PwaRegister } from '@/components/pwa/pwa-register';
 import { TiktokPageViews } from '@/components/analytics/tiktok-pixel';
+import { SourceCapture } from '@/components/analytics/source-capture';
 import './globals.css';
 
 const sans = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Script>
         <Providers>{children}</Providers>
         <TiktokPageViews />
+        <SourceCapture />
         <PwaRegister />
       </body>
     </html>

@@ -63,21 +63,18 @@ describe('register', () => {
     expect((await User.findOne({ email: 'bob@example.com' }))!.heardFrom).toBe('tiktok');
   });
 
-  it('will not sign anyone up who skips "How did you hear about us?"', async () => {
+  it('signs people up without a source, and keeps any short slug from the link', async () => {
     const { User } = await import('../models/User.js');
-    const { heardFrom: _skipped, ...withoutAnswer } = user;
-    const res = await request(app).post('/api/v1/auth/register').send(withoutAnswer);
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('validation_error');
-    expect(res.body.error.details).toHaveProperty('heardFrom');
-    expect(await User.countDocuments({})).toBe(0);
+    const { heardFrom: _none, ...withoutSource } = user;
+    await request(app).post('/api/v1/auth/register').send(withoutSource).expect(201);
+    expect((await User.findOne({ email: 'bob@example.com' }))!.heardFrom).toBeUndefined();
   });
 
-  it('refuses an answer that is not on the list, with a clear message', async () => {
-    const res = await request(app).post('/api/v1/auth/register').send({ ...user, heardFrom: 'a billboard' });
-    expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('validation_error');
-    expect(res.body.error.details).toHaveProperty('heardFrom');
+  it('drops a junk source instead of blocking sign-up or storing it, and still refuses an operator object', async () => {
+    const { User } = await import('../models/User.js');
+    await request(app).post('/api/v1/auth/register').send({ ...user, heardFrom: 'a billboard!!' }).expect(201);
+    expect((await User.findOne({ email: 'bob@example.com' }))!.heardFrom).toBeUndefined();
+    await request(app).post('/api/v1/auth/register').send({ ...user, email: 'x@example.com', phone: '08055550000', username: 'other_one', heardFrom: { $ne: null } }).expect(400);
   });
 
   it('an account made before verification was switched off can sign in, and is marked verified', async () => {

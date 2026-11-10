@@ -39,9 +39,12 @@ export const codeSchema = z
   .string()
   .regex(new RegExp(`^\\d{${AUTH_CODE_LENGTH}}$`), `Enter the ${AUTH_CODE_LENGTH}-digit code.`);
 
-/* ---------- "How did you hear about us?" ---------- */
+/* ---------- Where a sign-up came from ---------- */
 
-/** The answers on the sign-up dropdown. `value` is what we store (and count in the admin); `label` is what people see. */
+/**
+ * Nobody is asked any more: the source comes from the link they arrived on (`?source=tiktok`, or `utm_source`), remembered by the web app.
+ * Any short slug is accepted, so a new campaign needs no code change. These are just the nicer names the admin shows for known ones.
+ */
 export const HEARD_FROM_OPTIONS = [
   { value: 'tiktok', label: 'TikTok' },
   { value: 'instagram', label: 'Instagram' },
@@ -57,8 +60,14 @@ export const HEARD_FROM_OPTIONS = [
 export const heardFromLabel = (v: string | null | undefined): string =>
   v ? (HEARD_FROM_OPTIONS.find((o) => o.value === v)?.label ?? v) : "Didn't say";
 
-export type HeardFrom = (typeof HEARD_FROM_OPTIONS)[number]['value'];
-export const HEARD_FROM_VALUES = HEARD_FROM_OPTIONS.map((o) => o.value) as [HeardFrom, ...HeardFrom[]];
+export type HeardFrom = string;
+
+/** A source slug: lowercase letters, digits, `_` or `-`. Anything else in a link (junk, objects, long text) is dropped rather than blocking sign-up. */
+export const sourceSchema = z.preprocess((v) => {
+  if (typeof v !== 'string') return undefined;
+  const slug = v.trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9_-]{0,31}$/.test(slug) ? slug : undefined;
+}, z.string().optional());
 
 /* ---------- request bodies (one per endpoint) ---------- */
 
@@ -72,8 +81,8 @@ export const registerSchema = z.object({
   password: passwordSchema,
   username: newUsernameSchema,
   referralCode: z.string().trim().max(32).optional(),
-  // Required: one of the listed answers. It feeds the admin's "Where sign-ups come from" report.
-  heardFrom: z.enum(HEARD_FROM_VALUES, 'Please tell us how you heard about us.'),
+  // Optional: taken from the link (`?source=tiktok`). It feeds the admin's "Where sign-ups come from" report.
+  heardFrom: sourceSchema,
 });
 
 export const loginSchema = z.object({

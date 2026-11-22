@@ -4,6 +4,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { BOOST_SERVERS, formatNaira, type BoostServerId } from '@numvexs/shared';
 import { Icon } from '@/components/ui/icons';
+import { ServerTabs } from '@/components/numbers/server-tabs';
 import { ApiError } from '@/lib/api';
 import { useBoostCatalog } from '@/lib/hooks';
 import { cn } from '@/lib/cn';
@@ -101,25 +102,11 @@ export function SmmServicesPage() {
         </Link>
       </div>
 
-      {/* Server dropdown first (left), then the search box; stacked on phones. Like FloZap's filter row, in our blue. */}
-      <div className="mt-[34px] flex flex-col gap-3 sm:flex-row">
-        <div className="relative shrink-0 sm:w-[210px]">
-          <Icon name="globe" size={19} className="pointer-events-none absolute left-[18px] top-1/2 -translate-y-1/2 text-accent" />
-          <select
-            aria-label="Server"
-            value={server}
-            onChange={(e) => pick(e.target.value as BoostServerId)}
-            className="h-14 w-full cursor-pointer appearance-none rounded-2xl border border-accent/25 bg-accent-soft/60 pl-[46px] pr-11 text-[15px] font-extrabold outline-none transition-colors hover:border-accent/50 focus:border-accent focus:shadow-[0_0_0_4px_var(--accent-soft)]"
-          >
-            {BOOST_SERVERS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <Icon name="chevron" size={18} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-faint" />
-        </div>
-
+      {/* Server tabs first, then the search box. */}
+      <div className="mt-[34px]">
+        <ServerTabs tabs={BOOST_SERVERS} active={server} onPick={pick} />
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row">
         <label className="flex h-14 min-w-0 flex-1 items-center gap-3.5 rounded-2xl border border-accent/25 bg-accent-soft/60 px-[18px] focus-within:border-accent focus-within:shadow-[0_0_0_4px_var(--accent-soft)]">
           <Icon name="search" size={20} className="shrink-0 text-faint" />
           <input

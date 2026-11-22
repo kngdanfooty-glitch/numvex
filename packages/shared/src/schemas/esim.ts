@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
 /*
- * eSIMs: travel/data plans delivered as a QR code. One provider (SMSPool). Add another entry here, and its provider file, to bring back a server dropdown.
+ * eSIMs: travel/data plans delivered as a QR code. The first entry is the default server.
  * The page asks one server for its countries, then for that country's plans, when they are picked.
  */
 export const ESIM_SERVERS = [
-  { id: 'e1', label: 'Server 1' },
+  { id: 'e2', label: 'Server 1' },
+  { id: 'e1', label: 'Server 2' },
 ] as const;
 
 export type EsimServerId = (typeof ESIM_SERVERS)[number]['id'];

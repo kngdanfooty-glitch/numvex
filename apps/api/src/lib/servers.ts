@@ -6,6 +6,7 @@ import { badRequest } from './errors.js';
  * ("e1", "r1") in addresses and replies, never a provider's name. The database keeps the provider's name.
  */
 export const ESIM_PROVIDERS = {
+  e2: 'pikasim',
   e1: 'smspool',
 } as const satisfies Record<EsimServerId, string>;
 

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { RENTAL_SERVERS, formatNaira, type Rental, type RentalCountry, type RentalOption, type RentalServerId } from '@numvexs/shared';
 import { Icon } from '@/components/ui/icons';
+import { ServerTabs } from '@/components/numbers/server-tabs';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useExtendRental, useMe, useRefreshRental, useRentNumber, useRental, useRentalCountries, useRentalOptions, useRentals } from '@/lib/hooks';
@@ -82,22 +83,7 @@ function RentNumber({ onBought }: { onBought: () => void }) {
 
   return (
     <section className="space-y-3">
-      <div className="relative sm:w-[210px]">
-        <Icon name="globe" size={19} className="pointer-events-none absolute left-[18px] top-1/2 -translate-y-1/2 text-accent" />
-        <select
-          aria-label="Server"
-          value={server}
-          onChange={(e) => pick(e.target.value as RentalServerId)}
-          className="h-12 w-full cursor-pointer appearance-none rounded-2xl border border-accent/25 bg-accent-soft/60 pl-[46px] pr-11 text-[15px] font-extrabold outline-none transition-colors hover:border-accent/50 focus:border-accent focus:shadow-[0_0_0_4px_var(--accent-soft)]"
-        >
-          {RENTAL_SERVERS.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <Icon name="chevron" size={18} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-faint" />
-      </div>
+      <ServerTabs tabs={RENTAL_SERVERS} active={server} onPick={pick} />
 
       <Step title="1. Select country">
         {countries.isPending ? (

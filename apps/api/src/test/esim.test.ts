@@ -276,6 +276,14 @@ describe('esim: Server 1 (PikaSim)', () => {
     expect(calls('GET', '/packages')[0]!.query.get('country')).toBe('US');
   });
 
+  it('a regional bundle ("AF-29") has no country filter on their side: its plans are picked out of the full list', async () => {
+    answers['GET /packages'] = { body: { success: true, data: { packages: [pkg('R1', 'AF-29', 'Africa (25+ areas)', 1, 7, 900), pkg('P1', 'US', 'United States', 0.1, 7, 135)], pagination: { page: 1, limit: 200, total: 2, pages: 1 } } } };
+    const { cookie } = await user(0);
+    const res = await request(app).get('/api/v1/esim/servers/e2/plans?country=AF-29').set('Cookie', cookie).expect(200);
+    expect(res.body.plans.map((p: { id: string }) => p.id)).toEqual(['R1']);
+    expect(calls('GET', '/packages')[0]!.query.has('country')).toBe(false);
+  });
+
   it('buys: charges what the SERVER works out, uses our order id as the idempotency key, and returns the install data', async () => {
     const { u, cookie } = await user(P1 + 500);
     const res = await buy(cookie, { costKobo: 1 }).expect(201);

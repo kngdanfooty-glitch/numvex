@@ -105,7 +105,9 @@ export const pikasimEsim: EsimProvider = {
   },
 
   async plans(countryId): Promise<ProviderPlan[]> {
-    return (await packages(countryId))
+    // The country filter only knows plain two-letter codes. Regional bundles ("AF-29", "EU-42") have no filter, so pick them out of the full list.
+    const rows = await packages(/^[A-Za-z]{2}$/.test(countryId) ? countryId : undefined);
+    return rows
       .filter((p) => String(p.locationCode ?? '').toUpperCase() === countryId.toUpperCase())
       .map((p) => ({ id: String(p.packageCode), dataGb: Number(p.volumeGB), days: Number(p.validityDays), usd: Number(p.price) / 100, network: networkSummary(p), speed: p.speed ?? null }))
       .filter((p) => p.id && p.usd > 0 && p.dataGb > 0 && p.days > 0)

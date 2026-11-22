@@ -45,7 +45,7 @@ function Body({ d }: { d: NonNullable<ReturnType<typeof useDashboard>['data']> }
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Users" value={d.totals.users.toLocaleString()} sub={`+${d.totals.newUsers30d.toLocaleString()} in the last 30 days`} />
+        <Stat label="Users" value={d.totals.users.toLocaleString()} sub={`+${(d.userGrowth.at(-1)?.value ?? 0).toLocaleString()} today · +${d.totals.newUsers30d.toLocaleString()} in 30 days`} />
         {d.totals.walletFloatKobo !== null && <Stat label="Wallet float" value={formatNaira(d.totals.walletFloatKobo)} sub="Money users hold with us" />}
         {d.totals.depositsTodayKobo !== null && <Stat label="Deposits today" value={formatNaira(d.totals.depositsTodayKobo)} sub="Bank transfers credited" />}
         {d.totals.depositsMonthKobo !== null && <Stat label="Deposits, 30 days" value={formatNaira(d.totals.depositsMonthKobo)} />}
@@ -67,6 +67,20 @@ function Body({ d }: { d: NonNullable<ReturnType<typeof useDashboard>['data']> }
           <BarChart points={d.userGrowth} format={(v) => String(v)} color="var(--success)" />
         </Card>
       </div>
+
+      <Card title="Registered users, per day" hint="New accounts created each day, newest first (days run midnight to midnight, UTC).">
+        <Table head={['Day', 'New users']} empty="No sign-ups yet.">
+          {[...d.userGrowth].reverse().map((p, i) => (
+            <tr key={p.day}>
+              <Td className="font-semibold">
+                {new Date(`${p.day}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })}
+                {i === 0 ? <span className="ml-2 text-xs font-bold text-accent">Today</span> : null}
+              </Td>
+              <Td>{p.value.toLocaleString()}</Td>
+            </tr>
+          ))}
+        </Table>
+      </Card>
 
       <Card
         title="Where sign-ups come from"

@@ -5,7 +5,7 @@ import type { EsimProvider, ProviderPlan } from './types.js';
 
 /*
  * PikaSim reseller eSIMs. JSON over HTTPS, the key in the X-API-Key header, prices in integer US cents (already our reseller price).
- *   packages   GET  /packages?type=data&country=<code>&page=&limit=200   -> { data: [{ packageCode, location, locationCode, volumeGB, validityDays, price }], pagination }
+ *   packages   GET  /packages?type=data&country=<code>&page=&limit=200   -> { data: { packages: [{ packageCode, region (the name), locationCode, volumeGB, validityDays, price }], pagination } }
  *              (there is no countries call: the country list is built from the packages)
  *   buy        POST /orders { packageCode, externalOrderId }              -> { data: { orderId, status: "processing" } }  (async: ready in seconds)
  *   order      GET  /orders/:orderId                                      -> status processing | completed | failed, with the eSIM once completed
@@ -43,17 +43,23 @@ async function call(method: 'GET' | 'POST', path: string, body?: unknown): Promi
   return { status: res.status, json: await res.json().catch(() => null) };
 }
 
-/** Every data package, optionally for one country, across all pages. */
+/** Every data package, optionally for one country, across all pages (the first page tells how many there are; the rest are fetched together). */
 async function packages(country?: string): Promise<any[]> {
-  const all: any[] = [];
-  for (let page = 1; page <= 50; page++) {
-    const q = new URLSearchParams({ type: 'data', page: String(page), limit: '200', ...(country ? { country } : {}) });
+  const page = async (n: number) => {
+    const q = new URLSearchParams({ type: 'data', page: String(n), limit: '200', ...(country ? { country } : {}) });
     const { status, json } = await call('GET', `/packages?${q}`);
-    if (status >= 400 || !json?.success || !Array.isArray(json.data)) throw badReply();
-    all.push(...json.data);
-    if (page >= Number(json.pagination?.pages ?? 1)) break;
-  }
-  return all;
+    if (status >= 400 || !json?.success || !Array.isArray(json.data?.packages)) throw badReply();
+    return { rows: json.data.packages as any[], pages: Math.min(Number(json.data.pagination?.pages ?? 1), 50) };
+  };
+  const first = await page(1);
+  const rest = await Promise.all(Array.from({ length: first.pages - 1 }, (_, i) => page(i + 2)));
+  return [...first.rows, ...rest.flatMap((r) => r.rows)];
+}
+
+/** "[{ operatorList: [{ operatorName, networkType }] }]" -> "csl 5G, SmarTone 5G". */
+function networkSummary(p: any): string | null {
+  const names = (p.locationNetworkList ?? []).flatMap((l: any) => (l.operatorList ?? []).map((o: any) => `${o.operatorName} ${o.networkType ?? ''}`.trim()));
+  return names.length ? [...new Set<string>(names)].slice(0, 4).join(', ') : null;
 }
 
 /** "LPA:1$smdp.example$CODE" -> the two parts, for installing by hand. */
@@ -93,7 +99,7 @@ export const pikasimEsim: EsimProvider = {
     const byCode = new Map<string, string>();
     for (const p of await packages()) {
       const id = String(p.locationCode ?? '').toUpperCase();
-      if (id && !byCode.has(id)) byCode.set(id, String(p.location ?? id));
+      if (id && !byCode.has(id)) byCode.set(id, String(p.region ?? p.location ?? id));
     }
     return [...byCode].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   },
@@ -101,7 +107,7 @@ export const pikasimEsim: EsimProvider = {
   async plans(countryId): Promise<ProviderPlan[]> {
     return (await packages(countryId))
       .filter((p) => String(p.locationCode ?? '').toUpperCase() === countryId.toUpperCase())
-      .map((p) => ({ id: String(p.packageCode), dataGb: Number(p.volumeGB), days: Number(p.validityDays), usd: Number(p.price) / 100, network: null, speed: null }))
+      .map((p) => ({ id: String(p.packageCode), dataGb: Number(p.volumeGB), days: Number(p.validityDays), usd: Number(p.price) / 100, network: networkSummary(p), speed: p.speed ?? null }))
       .filter((p) => p.id && p.usd > 0 && p.dataGb > 0 && p.days > 0)
       .sort((a, b) => a.usd - b.usd);
   },

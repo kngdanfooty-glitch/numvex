@@ -13,7 +13,7 @@ import type { EsimProvider, ProviderPlan } from './types.js';
  * externalOrderId is the idempotency key: we send our own order id, so a retry can never buy twice.
  */
 const BASE = 'https://pikasim.com/api/v1/reseller';
-const POLL_EVERY_MS = 2_000;
+const POLL_EVERY_MS = 5_000;
 const POLL_FOR_MS = 25_000;
 
 const unavailable = () => new AppError(503, 'server_unavailable', 'This server is temporarily unavailable. Try another server.');

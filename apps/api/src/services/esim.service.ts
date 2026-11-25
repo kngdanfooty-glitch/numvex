@@ -7,7 +7,6 @@ import { EsimOrder } from '../models/EsimOrder.js';
 import { inTx } from '../lib/tx.js';
 import { User } from '../models/User.js';
 import { pikasimEsim } from './esim/pikasim.js';
-import { smspoolEsim } from './esim/smspool.js';
 import type { EsimProvider, ProviderPlan } from './esim/types.js';
 import { rates } from './settings.service.js';
 
@@ -18,7 +17,7 @@ import { rates } from './settings.service.js';
  *  - the same request id twice is the same purchase.
  * The provider hands over the install data (QR); we keep it so the buyer can open it again later.
  */
-const providers: Record<EsimSource, EsimProvider> = { pikasim: pikasimEsim, smspool: smspoolEsim };
+const providers: Record<EsimSource, EsimProvider> = { pikasim: pikasimEsim };
 
 const COUNTRIES_TTL = 10 * 60 * 1000;
 const PLANS_TTL = 5 * 60 * 1000;

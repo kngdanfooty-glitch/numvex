@@ -7,7 +7,6 @@ import { badRequest } from './errors.js';
  */
 export const ESIM_PROVIDERS = {
   e2: 'pikasim',
-  e1: 'smspool',
 } as const satisfies Record<EsimServerId, string>;
 
 export const RENTAL_PROVIDERS = {

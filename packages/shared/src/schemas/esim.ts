@@ -6,7 +6,6 @@ import { z } from 'zod';
  */
 export const ESIM_SERVERS = [
   { id: 'e2', label: 'Server 1' },
-  { id: 'e1', label: 'Server 2' },
 ] as const;
 
 export type EsimServerId = (typeof ESIM_SERVERS)[number]['id'];
